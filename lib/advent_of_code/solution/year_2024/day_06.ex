@@ -1,13 +1,9 @@
 defmodule AdventOfCode.Solution.Year2024.Day06 do
   def part1(input) do
-    {time, result} = :timer.tc(fn ->
-      matrix = generate_matrix(input)
-      inicial_position = current_position(matrix)
-      move(inicial_position, matrix)
-    end)
 
-    IO.puts("Execution time: #{time / 1_000_000} seconds")
-    result
+    matrix = generate_matrix(File.read!("data.txt"))
+    inicial_position = current_position(matrix)
+    move(inicial_position, matrix)
   end
 
   def generate_matrix(input) do
@@ -35,8 +31,8 @@ defmodule AdventOfCode.Solution.Year2024.Day06 do
   end
 
   def move({{x, y}, direction}, matrix) do
-    IO.inspect({{x, y}, direction})
-    updated_matrix = update_matrix(matrix, x, y)
+    # IO.inspect({{x, y}, direction})
+    updated_matrix = update_matrix(matrix, x, y, "X")
 
      case what_is_in_front({{x, y},  direction}, updated_matrix) do
       {:continue, {{row, col}, "."}} -> move({{row, col}, direction}, updated_matrix)
@@ -65,6 +61,7 @@ defmodule AdventOfCode.Solution.Year2024.Day06 do
       {{_r, _c}, "."} -> {:continue, {{row, col}, "."}}
       {{_r, _c}, "X"} -> {:continue, {{row, col}, "X"}}
       {{_r, _c}, "#"} -> {:turn, {{row, col}, "#"}}
+      {{_r, _c}, "\r"} -> {:error, "No element found in the specified direction"}
     end
   end
 
@@ -77,15 +74,54 @@ defmodule AdventOfCode.Solution.Year2024.Day06 do
     end
   end
 
-  def update_matrix(matrix, x, y) do
-    Enum.map(matrix, fn
-      {{row, col}, _} = elem when row == x and col == y -> {{row, col}, "X"}
-      elem -> elem
-    end)
+  def part2(input) do
+    matrix = generate_matrix(input)#generate_matrix(File.read!("data.txt"))
+    inicial_position = current_position(matrix)
+    possible_positions = Enum.filter(matrix, fn {{_row, _col}, char} -> char == "." end)
+
+    loop_positions_count =
+      possible_positions
+      |> Task.async_stream(fn {{row, col}, _char} ->
+        test_matrix = update_matrix(matrix, row, col, "#")
+        case is_loop?(inicial_position, test_matrix, MapSet.new()) do
+          {:loop_detected, _} -> true
+          _ -> false
+        end
+      end, max_concurrency: System.schedulers_online(), timeout: :infinity)
+      |> Enum.count(fn result -> result == {:ok, true} end)
+
+    IO.puts("Number of positions that cause a loop: #{loop_positions_count}")
+    loop_positions_count
   end
 
+  defp is_loop?(position, matrix, visited_positions) do
+    # IO.inspect(position)
+    if MapSet.member?(visited_positions, position) do
+      {:loop_detected, matrix}
+    else
+      {{x, y}, direction} = position
+      updated_matrix = update_matrix(matrix, x, y)
+
+      case what_is_in_front(position, updated_matrix) do
+
+        {:continue, {{row, col}, "."}} ->  is_loop?({{row, col}, direction}, updated_matrix, MapSet.put(visited_positions, position))
+        {:continue, {{row, col}, "X"}} ->  is_loop?({{row, col}, direction}, updated_matrix, MapSet.put(visited_positions, position))
 
 
-  def part2(_input) do
+        {:turn, _} ->
+          new_direction = change_direction(direction)
+          is_loop?({{x, y}, new_direction}, updated_matrix, MapSet.put(visited_positions, position))
+
+        {:error, _txt} ->
+          {:finished, "fim"}
+      end
+    end
+  end
+
+  defp update_matrix(matrix, x, y, new_char \\ "X") do
+    Enum.map(matrix, fn
+      {{row, col}, _} = elem when row == x and col == y -> {{row, col}, new_char}
+      elem -> elem
+    end)
   end
 end
