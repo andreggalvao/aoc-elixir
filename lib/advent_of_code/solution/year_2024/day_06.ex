@@ -1,5 +1,5 @@
 defmodule AdventOfCode.Solution.Year2024.Day06 do
-  def part1(input) do
+  def part1(_input) do
 
     matrix = generate_matrix(File.read!("data.txt"))
     inicial_position = current_position(matrix)
@@ -120,7 +120,7 @@ defmodule AdventOfCode.Solution.Year2024.Day06 do
 
   defp update_matrix(matrix, x, y, new_char \\ "X") do
     Enum.map(matrix, fn
-      {{row, col}, _} = elem when row == x and col == y -> {{row, col}, new_char}
+      {{row, col}, _} = _elem when row == x and col == y -> {{row, col}, new_char}
       elem -> elem
     end)
   end
