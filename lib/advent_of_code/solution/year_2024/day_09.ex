@@ -1,6 +1,6 @@
 defmodule AdventOfCode.Solution.Year2024.Day09 do
   def part1(input) do
-    input = "2333133121414131402"
+    input# = "2333133121414131402"
     |> parse()
     |> process()
     |> process_string()
